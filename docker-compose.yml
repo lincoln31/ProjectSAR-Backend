@@ -1,0 +1,18 @@
+version: '3.8' # Especifica la versión de la sintaxis de Docker Compose
+
+services:
+  db_postgres: # Nombre del servicio (puedes elegir otro si prefieres)
+    image: postgres:15 # Puedes especificar una versión de PostgreSQL, ej: postgres:15, postgres:14, etc. O dejar 'postgres' para la última.
+    container_name: conjunto_residencial_postgres_db # Nombre que tendrá el contenedor Docker
+    restart: unless-stopped # Política de reinicio: reinicia a menos que se detenga manualmente
+    environment:
+      POSTGRES_USER: puniversidad # Nombre de usuario para PostgreSQL
+      POSTGRES_PASSWORD: Admin123 # Contraseña para el usuario de PostgreSQL
+      POSTGRES_DB: conjunto_residencial_db # Nombre de la base de datos a crear
+    ports:
+      - "5432:5432" # Mapea el puerto 5432 del host al 5432 del contenedor
+    volumes:
+      - postgres_data:/var/lib/postgresql/data # Persiste los datos de PostgreSQL en un volumen Docker
+
+volumes:
+  postgres_data: # Define el volumen para persistir los datos
