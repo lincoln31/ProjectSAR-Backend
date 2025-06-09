@@ -23,6 +23,7 @@ import java.util.Set;
 })
 public class User {
 
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -36,14 +37,9 @@ public class User {
     @Column(nullable = false, unique = true, length = 100)
     private String email;
 
-    @Column(name = "first_name", length = 100)
-    private String firstName;
 
-    @Column(name = "last_name", length = 100)
-    private String lastName;
 
-    @Column(length = 20)
-    private String phone;
+
 
     private boolean enabled = true; // Para activar/desactivar usuarios
 
@@ -64,8 +60,7 @@ public class User {
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
-    // Podríamos añadir campos para el perfil aquí o en una entidad UserProfile separada
-    // Por ejemplo:
-    // private String identificationNumber;
-    // private String address; // O asociarlo a un apartamento
+    // Relación con UserProfile (dueña de la relación por 'mappedBy')
+    @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, fetch = FetchType.LAZY, orphanRemoval = true)
+    private UserProfile userProfile;
 }

@@ -2,6 +2,7 @@ package com.conjuntoresidencial.api.domain.user.port.out;
 
 
 import com.conjuntoresidencial.api.domain.user.model.User;
+import com.conjuntoresidencial.api.domain.user.model.Role;
 
 import java.util.List;
 import java.util.Optional;
@@ -24,7 +25,5 @@ public interface UserRepositoryPort {
 
     void deleteById(Long id);
 
-    // Otros métodos podrían ser:
-    // List<User> findByRole(Role role);
-    // Page<User> findAll(Pageable pageable); // Para paginación
+
 }

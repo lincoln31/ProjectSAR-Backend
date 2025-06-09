@@ -38,7 +38,10 @@ public class RegisterRequestDTO {
     @Size(max = 100)
     private String lastName;
 
-    private String phone; // Opcional
+    @Size(max = 20) // Opcional, ajustar validación si es necesario
+    private String phone;
+
+
 
     private Set<String> roles; // Opcional: nombres de los roles a asignar, ej: ["RESIDENTE", "PROPIETARIO"]
     // Si no se provee, se podría asignar un rol por defecto.

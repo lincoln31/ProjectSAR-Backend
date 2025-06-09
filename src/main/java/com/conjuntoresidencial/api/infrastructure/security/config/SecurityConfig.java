@@ -57,21 +57,24 @@ public class SecurityConfig {
     @Bean // Configura la cadena de filtros de seguridad
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-                .csrf(AbstractHttpConfigurer::disable) // Deshabilitar CSRF ya que usaremos JWT (stateless)
-                .cors(cors -> cors.configurationSource(corsConfigurationSource())) // Configuración CORS
+                .csrf(AbstractHttpConfigurer::disable)
+                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .exceptionHandling(exception -> exception
-                        .authenticationEntryPoint(unauthorizedHandler) // Manejador para cuando la autenticación falla
+                                .authenticationEntryPoint(unauthorizedHandler) // Manejador para 401
+                        // .accessDeniedHandler(accessDeniedHandler()) // Opcional: para 403
                 )
                 .sessionManagement(session -> session
-                        .sessionCreationPolicy(SessionCreationPolicy.STATELESS) // No crear ni usar sesiones HTTP (API stateless)
+                        .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                 )
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers(PUBLIC_URLS).permitAll() // Permitir acceso a URLs públicas
-                        .requestMatchers(HttpMethod.GET, "/api/v1/some-public-resource").permitAll() // Ejemplo de un GET público específico
-                        .anyRequest().authenticated() // Cualquier otra petición requiere autenticación
+                        .requestMatchers(PUBLIC_URLS).permitAll() // Primero las reglas más específicas de permitir
+                        // .requestMatchers(HttpMethod.GET, "/api/v1/some-public-resource").permitAll() // Otros ejemplos
+                        .anyRequest().authenticated() // Luego, todo lo demás requiere autenticación
                 );
 
-        // Añadir nuestro filtro JWT antes del filtro estándar de autenticación por usuario y contraseña
+        // Añade tu filtro JWT. Se ejecutará para cada request.
+        // Su lógica interna debe ser la que determine si autentica o no,
+        // pero no debe bloquear el paso si no hay token para rutas públicas.
         http.addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
@@ -80,13 +83,17 @@ public class SecurityConfig {
     @Bean // Configuración de CORS
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(List.of("http://localhost:4200")); // Orígenes permitidos (URL de tu frontend Angular)
+        // Es más seguro ser explícito con los orígenes en producción. Para desarrollo localhost:4200 está bien.
+        configuration.setAllowedOrigins(List.of("http://localhost:4200"));
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
-        configuration.setAllowedHeaders(Arrays.asList("authorization", "content-type", "x-auth-token"));
-        configuration.setExposedHeaders(List.of("x-auth-token"));
-        configuration.setAllowCredentials(true); // Permitir credenciales (cookies, encabezados de autorización)
+        // Considera ser más específico con los headers si es posible
+        configuration.setAllowedHeaders(Arrays.asList("*")); // O especificar: "Authorization", "Content-Type", "X-Auth-Token", etc.
+        configuration.setExposedHeaders(Arrays.asList("Authorization", "Content-Type", "X-Auth-Token")); // O los que necesites exponer
+        configuration.setAllowCredentials(true);
+        // configuration.setMaxAge(3600L); // Opcional: cuánto tiempo el resultado de una pre-flight request puede ser cacheado
+
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/**", configuration); // Aplicar esta configuración a todas las rutas
+        source.registerCorsConfiguration("/**", configuration);
         return source;
     }
 }
