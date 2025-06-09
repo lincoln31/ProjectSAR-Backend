@@ -35,47 +35,62 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter { // Se ejecut
     protected void doFilterInternal(@NonNull HttpServletRequest request,
                                     @NonNull HttpServletResponse response,
                                     @NonNull FilterChain filterChain) throws ServletException, IOException {
+
+        logger.info("JwtAuthenticationFilter: INICIO - Procesando request para URI: {}", request.getRequestURI()); // LOG INICIO
+
         try {
             String jwt = getJwtFromRequest(request);
+            // LOG MODIFICADO para mostrar más claramente si el token está o no
+            if (jwt == null) {
+                logger.debug("JwtAuthenticationFilter: JWT extraído: Ausente");
+            } else {
+                logger.debug("JwtAuthenticationFilter: JWT extraído: Presente (longitud: {})", jwt.length());
+                // Puedes loggear el token completo si estás en un entorno de desarrollo seguro, pero ten cuidado con información sensible.
+                // logger.trace("JwtAuthenticationFilter: Token completo: {}", jwt); // Usa TRACE para logs muy detallados
+            }
 
-            if (StringUtils.hasText(jwt) && tokenProvider.validateToken(jwt)) {
-                String username = tokenProvider.getUsernameFromJWT(jwt);
 
-                // Cargar UserDetails (incluye autoridades/roles)
-                UserDetails userDetails = userDetailsService.loadUserByUsername(username);
+            if (StringUtils.hasText(jwt)) {
+                logger.debug("JwtAuthenticationFilter: JWT tiene texto, intentando validar...");
+                boolean isTokenValid = tokenProvider.validateToken(jwt); // Llama a validateToken
+                logger.debug("JwtAuthenticationFilter: Resultado de tokenProvider.validateToken(jwt): {}", isTokenValid); // LOG RESULTADO VALIDACIÓN
 
-                // Crear el objeto de autenticación
-                UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
-                        userDetails, // El principal (nuestro UserDetails)
-                        null,        // Credenciales (no necesarias aquí ya que el token ya está validado)
-                        userDetails.getAuthorities() // Las autoridades (roles)
-                );
+                if (isTokenValid) {
+                    String username = tokenProvider.getUsernameFromJWT(jwt);
+                    logger.debug("JwtAuthenticationFilter: Username obtenido del token: {}", username); // LOG USERNAME
 
-                // Establecer detalles adicionales de la autenticación web
-                authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                    UserDetails userDetails = userDetailsService.loadUserByUsername(username);
+                    logger.debug("JwtAuthenticationFilter: UserDetails cargados para el username: {}", userDetails.getUsername()); // LOG USERDETAILS
 
-                // Establecer la autenticación en el contexto de seguridad de Spring
-                // A partir de este punto, Spring Security considera al usuario como autenticado para esta solicitud
-                SecurityContextHolder.getContext().setAuthentication(authentication);
+                    UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
+                            userDetails, null, userDetails.getAuthorities());
+                    authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
 
-                logger.debug("Usuario '{}' autenticado exitosamente con token JWT.", username);
+                    SecurityContextHolder.getContext().setAuthentication(authentication);
+                    logger.info("JwtAuthenticationFilter: Usuario '{}' autenticado y contexto de seguridad establecido.", username); // LOG AUTENTICACIÓN EXITOSA
+                } else {
+                    logger.warn("JwtAuthenticationFilter: Validacion de token fallida (validateToken devolvió false) para URI: {}", request.getRequestURI());
+                    // No se establece la autenticación si el token no es válido
+                }
+            } else {
+                logger.debug("JwtAuthenticationFilter: No se encontró token JWT con texto en el request para URI: {}", request.getRequestURI());
             }
         } catch (Exception ex) {
-            logger.error("No se pudo establecer la autenticación del usuario en el contexto de seguridad", ex);
-            // No es necesario lanzar la excepción aquí, ya que si SecurityContextHolder no tiene autenticación,
-            // los siguientes filtros o la configuración de autorización lo manejarán (ej. JwtAuthenticationEntryPoint).
+            // Loguea la excepción completa para entender qué pudo haber fallado
+            logger.error("JwtAuthenticationFilter: Excepción durante doFilterInternal para URI: {}. Mensaje: {}", request.getRequestURI(), ex.getMessage(), ex);
         }
 
-        // Continuar con la cadena de filtros
+        logger.info("JwtAuthenticationFilter: FIN - Continuando cadena de filtros para URI: {}", request.getRequestURI()); // LOG FIN
         filterChain.doFilter(request, response);
     }
 
-    // Extrae el token JWT del encabezado "Authorization"
     private String getJwtFromRequest(HttpServletRequest request) {
         String bearerToken = request.getHeader(HEADER_AUTHORIZATION);
         if (StringUtils.hasText(bearerToken) && bearerToken.startsWith(TOKEN_PREFIX)) {
-            return bearerToken.substring(TOKEN_PREFIX.length()); // Remueve el prefijo "Bearer "
-        }
+            String token = bearerToken.substring(TOKEN_PREFIX.length());
+            return token.trim(); // <--- AÑADIR .trim()
+                    }
+        logger.trace("JwtAuthenticationFilter: No se encontró el header '{}' o no comienza con '{}'", HEADER_AUTHORIZATION, TOKEN_PREFIX);
         return null;
     }
 }

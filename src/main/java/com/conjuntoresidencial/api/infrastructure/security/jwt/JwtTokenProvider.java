@@ -87,27 +87,32 @@ public class JwtTokenProvider {
 
     // Valida el token JWT
     public boolean validateToken(String authToken) {
+        logger.debug("JwtTokenProvider: Iniciando validación del token..."); // LOG INICIO VALIDACIÓN
         if (authToken == null || authToken.isBlank()) {
-            logger.warn("Token JWT está vacío o es nulo");
+            logger.warn("JwtTokenProvider: Token JWT está vacío o es nulo. Validación fallida.");
             return false;
         }
         try {
             Jwts.parser()
-                    .verifyWith(key()) // Verifica la firma
+                    .verifyWith(key())
                     .build()
-                    .parseSignedClaims(authToken); // Intenta parsear, si falla lanza excepción
+                    .parseSignedClaims(authToken);
+            logger.info("JwtTokenProvider: Token JWT validado exitosamente."); // LOG VALIDACIÓN EXITOSA
             return true;
         } catch (SignatureException ex) {
-            logger.error("Firma JWT inválida: {}", ex.getMessage());
+            logger.error("JwtTokenProvider: Firma JWT inválida. Mensaje: {}", ex.getMessage());
         } catch (MalformedJwtException ex) {
-            logger.error("Token JWT malformado: {}", ex.getMessage());
+            logger.error("JwtTokenProvider: Token JWT malformado. Mensaje: {}", ex.getMessage());
         } catch (ExpiredJwtException ex) {
-            logger.error("Token JWT expirado: {}", ex.getMessage());
+            logger.error("JwtTokenProvider: Token JWT expirado. Mensaje: {}", ex.getMessage());
         } catch (UnsupportedJwtException ex) {
-            logger.error("Token JWT no soportado: {}", ex.getMessage());
+            logger.error("JwtTokenProvider: Token JWT no soportado. Mensaje: {}", ex.getMessage());
         } catch (IllegalArgumentException ex) {
-            logger.error("Las claims del JWT están vacías: {}", ex.getMessage());
+            logger.error("JwtTokenProvider: Las claims del JWT están vacías o son inválidas. Mensaje: {}", ex.getMessage());
+        } catch (Exception ex) { // Captura genérica por si algo más falla
+            logger.error("JwtTokenProvider: Ocurrió una excepción inesperada durante la validación del token. Mensaje: {}", ex.getMessage(), ex);
         }
+        logger.warn("JwtTokenProvider: Validación del token JWT fallida (alguna excepción ocurrió)."); // LOG FALLO GENERAL
         return false;
     }
 }

@@ -1,20 +1,21 @@
 package com.conjuntoresidencial.api.domain.user.model;
 
-import lombok.Data;
-import lombok.NoArgsConstructor;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
+import com.fasterxml.jackson.annotation.JsonBackReference;
+import lombok.*;
 // import javax.persistence.*; // Para Jakarta EE 9+ (Spring Boot 3+)
 import jakarta.persistence.*; // Para Jakarta EE 9+ (Spring Boot 3+)
 
 import java.time.LocalDate;
 
-@Data
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
 @Entity
 @Table(name = "user_profiles")
+@ToString(exclude = {"user"})
+@EqualsAndHashCode(exclude = {"user"})
 public class UserProfile {
 
     @Id
@@ -37,7 +38,8 @@ public class UserProfile {
 
     private LocalDate birthDate;
 
-    @OneToOne(fetch = FetchType.LAZY) // O EAGER si siempre lo necesitas con User
+    @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", referencedColumnName = "id", nullable = false, unique = true)
-    private User user; // Relación con la entidad User
+    @JsonBackReference("user-profile")
+    private User user;
 }
