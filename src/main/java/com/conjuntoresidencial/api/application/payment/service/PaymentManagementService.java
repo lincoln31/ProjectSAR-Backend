@@ -16,6 +16,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 // import java.time.LocalDate; // Si implementas getPaymentsByDateRange
+import com.conjuntoresidencial.api.domain.transaction.model.Transaction;
+import com.conjuntoresidencial.api.domain.transaction.model.TransactionType;
+import com.conjuntoresidencial.api.domain.transaction.port.out.TransactionRepositoryPort; // Nueva dependencia
 
 @Service
 @RequiredArgsConstructor
@@ -24,6 +27,8 @@ public class PaymentManagementService implements ManagePaymentUseCase {
     private final UserRepositoryPort userRepository;
     private final ApartmentRepositoryPort apartmentRepository;
     private final PaymentMapper paymentMapper;
+    private final TransactionRepositoryPort transactionRepository; // Nueva
+
 
     @Override
     @Transactional
@@ -149,13 +154,39 @@ public class PaymentManagementService implements ManagePaymentUseCase {
     @Override
     @Transactional
     public Payment updatePaymentStatus(Long paymentId, PaymentStatus newStatus, String authenticatedUsername) {
-        Payment payment = getPaymentById(paymentId); // Reusa el método para obtener y lanzar NotFound
-        // User adminUser = userRepository.findByUsername(authenticatedUsername)... // Podrías loggear quién cambió el estado
+        Payment payment = getPaymentById(paymentId); // getPaymentById ya inicializa las relaciones necesarias
 
+        User adminUser = userRepository.findByUsername(authenticatedUsername)
+                .orElseThrow(() -> new ResourceNotFoundException("Admin user not found: " + authenticatedUsername));
+
+        // Forzar carga del UserProfile del admin si el mapper de Transaction lo necesita (si es LAZY)
+        if (adminUser.getUserProfile() != null) {
+            adminUser.getUserProfile().getFirstName(); // o cualquier campo
+        }
+
+
+        PaymentStatus oldStatus = payment.getStatus();
         payment.setStatus(newStatus);
-        // Aquí podrías añadir lógica adicional si el estado cambia a PAGADO, VENCIDO, etc.
-        // Ej: si es PAGADO y antes era PENDIENTE, enviar notificación.
-        return paymentRepository.save(payment);
+        Payment updatedPayment = paymentRepository.save(payment);
+
+        // Crear una transacción si el pago se marca como PAGADO y antes no lo estaba
+        if (newStatus == PaymentStatus.PAGADO && oldStatus != PaymentStatus.PAGADO) {
+            Transaction paymentTransaction = Transaction.builder()
+                    .type(TransactionType.PAGO_RECIBIDO)
+                    .amount(updatedPayment.getAmount())
+                    .description("Pago recibido: " + updatedPayment.getConcept())
+                    .relatedPayment(updatedPayment)
+                    .user(updatedPayment.getUser()) // El usuario que pagó
+                    .apartment(updatedPayment.getApartment()) // El apartamento del pago
+                    .createdBy(adminUser) // El admin que confirmó el pago
+                    // transactionDate se establece por @CreationTimestamp
+                    .build();
+            transactionRepository.save(paymentTransaction);
+        }
+        // Aquí podrías añadir lógica para otros cambios de estado que generan transacciones
+        // Ej: si newStatus == PaymentStatus.REEMBOLSADO, crear una transacción de reembolso.
+
+        return updatedPayment; // Devolver el pago actualizado
     }
 
     @Override
