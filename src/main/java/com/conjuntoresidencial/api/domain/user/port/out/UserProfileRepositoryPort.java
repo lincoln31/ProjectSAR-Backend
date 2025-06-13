@@ -5,6 +5,7 @@ import com.conjuntoresidencial.api.domain.user.model.UserProfile;
 import java.util.Optional;
 
 public interface UserProfileRepositoryPort {
+    Optional<UserProfile> findByDocumentId(String documentId); // NUEVO MÉTODO
     UserProfile save(UserProfile userProfile);
     Optional<UserProfile> findById(Long id);
     Optional<UserProfile> findByUser(User user); // Muy útil

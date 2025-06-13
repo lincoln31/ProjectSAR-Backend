@@ -1,5 +1,6 @@
 package com.conjuntoresidencial.api.domain.user.model;
 
+import com.conjuntoresidencial.api.domain.residency.model.Residency;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import lombok.*;
@@ -66,4 +67,7 @@ public class User {
     @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, fetch = FetchType.LAZY, orphanRemoval = true)
     @JsonManagedReference("user-profile")
     private UserProfile userProfile;
+    // En User.java
+    @OneToMany(mappedBy = "user", fetch = FetchType.LAZY) // Asumiendo que Residency tiene un campo "user"
+    private Set<Residency> residencies = new HashSet<>();
 }

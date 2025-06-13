@@ -15,6 +15,11 @@ public class UserProfilePersistenceAdapter implements UserProfileRepositoryPort 
     private final UserProfileJpaRepository userProfileJpaRepository;
 
     @Override
+    public Optional<UserProfile> findByDocumentId(String documentId) {
+        return userProfileJpaRepository.findByDocumentId(documentId); // ¡CORREGIDO!
+    }
+
+    @Override
     public UserProfile save(UserProfile userProfile) {
         return userProfileJpaRepository.save(userProfile);
     }
